@@ -9,6 +9,7 @@ output: github_document
 library(tidyverse)
 library(dplyr)
 library(readr)
+library(readxl)
 ```
 
 ## Problem 1
@@ -48,11 +49,37 @@ nyc_transit = nyc_transit %>%
 There are `r nrow(distinct(filter(nyc_transit, route_name =="A"), station_name))` distinct stations serve the A train. Among the stations that serve the A train, `r nrow(distinct(filter(nyc_transit, route_name =="A", ada == TRUE), station_name))` are ADA compliant. 
 
 
+## Problem 2
 
-## 
-
-
+Read and clean the Mr. Trash Wheel sheet:
 ```{r echo=FALSE}
+trash_wheel = read_excel("Trash Wheel Collection Data.xlsx", 
+                         sheet = "Mr. Trash Wheel", 
+                         range = "A2:N550") %>% 
+              janitor::clean_names() %>% 
+              drop_na("dumpster") %>% 
+          mutate(sports_balls = as.integer(sports_balls),
+                 track = "trash_wheel")
 
 ```
+
+Read and clean the Professor Trash Wheel sheet:
+```{r}
+professor_trash_wheel = read_excel("Trash Wheel Collection Data.xlsx", 
+                                    sheet = "Professor Trash Wheel", 
+                                    range = "A2:M550") %>% 
+                      janitor::clean_names() %>% 
+                      drop_na("dumpster") %>% 
+                      mutate(track = "professor_trash_wheel", 
+                             sports_balls = NA)
+                      
+```
+
+Merge two dataset:
+```{r}
+tidy_wheel = rbind(trash_wheel, professor_trash_wheel)
+```
+
+The new dataset `tidy_wheel` are created by combining `trash_wheel` and `professor_trash_wheel` by variable names. The resulting dataset has `r nrow(tidy_wheel)` observations. Some key variables included in this datasets include "date", "weight_tons" and "volume_cubic_yards". The total weight of trash collected by Professor Trash Wheel is `r sum(tidy_wheel$weight_tons[tidy_wheel$track == "professor_trash_wheel"])` tons. The total number of sports balls collected by Mr. Trash Wheel in 2020 is `r sum(tidy_wheel$sports_balls[(tidy_wheel$track == "trash_wheel")&(tidy_wheel$year == 2020)])`. 
+
 
