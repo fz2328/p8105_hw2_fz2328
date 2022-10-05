@@ -6,15 +6,48 @@ output: github_document
 ---
 
 ```{r setup, include=FALSE}
+library(tidyverse)
+library(dplyr)
+library(readr)
+```
+
+## Problem 1
+
+Load the NYC Transit Data
+```{r, message=FALSE}
+nyc_transit = 
+      read_csv("NYC_Transit_Subway_Entrance_And_Exit_Data.csv") %>% 
+      janitor::clean_names() %>%
+      select(line, station_name, station_latitude, station_longitude, 
+             starts_with("route"), entry, vending, entrance_type, ada) %>% 
+      mutate(entry = as.logical(recode(entry, YES = "TRUE", NO = "FALSE")))
 
 ```
 
-## 
+The csv files has loaded and the variable names are cleaned. Only desired variabels were retained, including `r ls(nyc_transit)`. The dimension of the resulting dataset is `r nrow(nyc_transit)` rows and `r ncol(nyc_transit)` columns. The data is not tidy since the some variables can be combines, such as the routes. 
 
+* There are `r nrow(distinct(nyc_transit, line, station_name))` distinct stations.
+* There are `r sum(nyc_transit$ada)` stations that are ADA compliant.
+* The proportion of station entrances/exits without vending allow entrance is `r (length(nyc_transit$entry[(nyc_transit$entry ==TRUE) & (nyc_transit$vending == "NO")]))/length(nyc_transit$vending[nyc_transit$vending == "NO"])`. 
 
+Reformat data so that route number and route name are distinct variables.
 ```{r}
-
+nyc_transit = nyc_transit %>% 
+  mutate(
+         route8 = as.character(route8),
+         route9 = as.character(route9),
+         route10 = as.character(route10),
+         route11 = as.character(route11)) %>% 
+  pivot_longer(
+         route1:route11,
+         names_to = "route_number", 
+         names_prefix = "route",
+         values_to = "route_name")
 ```
+
+There are `r nrow(distinct(filter(nyc_transit, route_name =="A"), station_name))` distinct stations serve the A train. Among the stations that serve the A train, `r nrow(distinct(filter(nyc_transit, route_name =="A", ada == TRUE), station_name))` are ADA compliant. 
+
+
 
 ## 
 
