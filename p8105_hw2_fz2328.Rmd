@@ -32,7 +32,7 @@ The csv files has loaded and the variable names are cleaned. Only desired variab
 * The proportion of station entrances/exits without vending allow entrance is `r (length(nyc_transit$entry[(nyc_transit$entry ==TRUE) & (nyc_transit$vending == "NO")]))/length(nyc_transit$vending[nyc_transit$vending == "NO"])`. 
 
 Reformat data so that route number and route name are distinct variables.
-```{r}
+```{r, message=FALSE}
 nyc_transit = nyc_transit %>% 
   mutate(
          route8 = as.character(route8),
@@ -52,7 +52,7 @@ There are `r nrow(distinct(filter(nyc_transit, route_name =="A"), station_name))
 ## Problem 2
 
 Read and clean the Mr. Trash Wheel sheet:
-```{r echo=FALSE}
+```{r, message=FALSE}
 trash_wheel = read_excel("Trash Wheel Collection Data.xlsx", 
                          sheet = "Mr. Trash Wheel", 
                          range = "A2:N550") %>% 
@@ -64,7 +64,7 @@ trash_wheel = read_excel("Trash Wheel Collection Data.xlsx",
 ```
 
 Read and clean the Professor Trash Wheel sheet:
-```{r}
+```{r, message=FALSE}
 professor_trash_wheel = read_excel("Trash Wheel Collection Data.xlsx", 
                                     sheet = "Professor Trash Wheel", 
                                     range = "A2:M550") %>% 
@@ -76,10 +76,67 @@ professor_trash_wheel = read_excel("Trash Wheel Collection Data.xlsx",
 ```
 
 Merge two dataset:
-```{r}
+```{r, message=FALSE}
 tidy_wheel = rbind(trash_wheel, professor_trash_wheel)
 ```
 
 The new dataset `tidy_wheel` are created by combining `trash_wheel` and `professor_trash_wheel` by variable names. The resulting dataset has `r nrow(tidy_wheel)` observations. Some key variables included in this datasets include "date", "weight_tons" and "volume_cubic_yards". The total weight of trash collected by Professor Trash Wheel is `r sum(tidy_wheel$weight_tons[tidy_wheel$track == "professor_trash_wheel"])` tons. The total number of sports balls collected by Mr. Trash Wheel in 2020 is `r sum(tidy_wheel$sports_balls[(tidy_wheel$track == "trash_wheel")&(tidy_wheel$year == 2020)])`. 
 
+## Problem 3
 
+Import and clean  data in `pols-month.csv`.
+```{r, message=FALSE}
+pols = read_csv("fivethirtyeight_datasets/pols-month.csv") %>% 
+  janitor::clean_names() %>% 
+  separate(mon, into = c("year", "month", "day"), sep = "-") %>% 
+  mutate(year = as.numeric(year),
+         month = recode(month, "01" = "jan", "02" = "feb", "03" = "mar",
+                       "04" = "apr", "05" = "may", "06" = "jun",
+                       "07" = "jul", "08" = "aug", "09" = "sep",
+                       "10" = "oct", "11" = "nov", "12" = "dec"),
+         president = ifelse(prez_dem == 1, "dem", "gop")) %>% 
+  select(-c(prez_dem, prez_gop, day))
+```
+
+Import and clean  data in `snp.csv`
+```{r, message=FALSE}
+snp = read_csv("fivethirtyeight_datasets/snp.csv") %>% 
+  janitor::clean_names() %>% 
+  separate(date, into = c("month", "day", "year"), sep = "/") %>% 
+  mutate(year = as.numeric(year), 
+         month = as.numeric(month)) %>% 
+  mutate(year = ifelse(year > 20, year + 1900, year + 2000)) %>% 
+  relocate(year, everything()) %>% 
+  arrange(year, month) %>% 
+  mutate(month = recode(month, "1" = "jan", "2" = "feb", "3" = "mar",
+                       "4" = "apr", "5" = "may", "6" = "jun",
+                       "7" = "jul", "8" = "aug", "9" = "sep",
+                       "10" = "oct", "11" = "nov", "12" = "dec")) %>% 
+  select(-day)
+
+```
+
+Import and clean  data in `unemployment.csv`
+```{r, message=FALSE}
+unemployment = read_csv("fivethirtyeight_datasets/unemployment.csv") %>% 
+  janitor::clean_names() %>% 
+  pivot_longer(
+         jan:dec,
+         names_to = "month", 
+         values_to = "unemployment_percentage") %>% 
+  mutate(year = as.numeric(year))
+```
+
+Join the datasets:
+```{r, message=FALSE}
+problem3_merge = full_join(pols, snp, by = c("year", "month")) %>% 
+                full_join(unemployment, by = c("year", "month"))
+```
+
+The dataset `pols` contains information about national politicians who are democratic or republican at any given time. It has `r nrow(pols)` rows.observations and `r ncol(pols)` columns/variables. The years in the resulting dataset range from`r min(pols$year)` to `r max(pols$year)`. Some key variables in this dataset inlcude `year` and the parties for `president`.
+
+The dataset `snp`contains the close values of the S&P stock index on the associated date. It has `r nrow(snp)` rows.observations and `r ncol(snp)` columns/variables. The years in the resulting dataset range from`r min(snp$year)` to `r max(snp$year)`. Some key variables in this dataset inlcude `year` and `close`.
+
+The dataset `unemployment` show the unemployment percentage in each year. It has `r nrow(unemployment)` rows.observations and `r ncol(unemployment)` columns/variables. The years in the resulting dataset range from`r min(unemployment$year)` to `r max(unemployment$year)`.
+
+The resulting dataset `problem3_merge` has `r nrow(problem3_merge)` rows.observations and `r ncol(problem3_merge)` columns/variables. The years in the resulting dataset range from`r min(problem3_merge$year)` to `r max(problem3_merge$year)`. Some key variables in this dataset inlcude `year` `president` and `unemployment percentage`. 
